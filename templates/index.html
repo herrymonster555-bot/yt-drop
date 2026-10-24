@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#090a0f">
+  <meta name="description" content="YT Drop helps you save YouTube videos as MP4 or extract audio as MP3 when available.">
+  <title>YT Drop — YouTube Video & MP3 Downloader</title>
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<div class="ambient ambient-one"></div><div class="ambient ambient-two"></div>
+<header class="site-header">
+  <a class="brand" href="#home" aria-label="YT Drop home"><img src="{{ url_for('static', filename='logo.svg') }}" alt="" class="brand-logo"><span>YT<span class="brand-accent">Drop</span></span></a>
+  <nav class="desktop-nav" id="nav"><a href="#home">Home</a><a href="#how-it-works">How it works</a><a href="#faq">FAQ</a></nav>
+  <a class="header-cta" href="#downloader">Start downloading <span>↗</span></a>
+  <button class="menu-toggle" id="menuToggle" aria-label="Toggle menu" aria-expanded="false">☰</button>
+</header>
+<main id="home">
+  <section class="hero">
+    <div class="hero-grid"></div><div class="hero-content reveal">
+      <div class="eyebrow"><span class="live-dot"></span> YOUR MEDIA. YOUR WAY.</div>
+      <h1>Good videos.<br><span class="gradient-text">One quick drop.</span></h1>
+      <p class="hero-copy">Save YouTube videos as MP4 or take the audio with you as MP3. Simple, fast, and made to stay out of your way.</p>
+      <div class="downloader-card" id="downloader">
+        <div class="card-topline"><span class="tiny-label">YT DROP DOWNLOADER</span><span class="secure-label"><span>✦</span> Simple & secure</span></div>
+        <label class="input-label" for="pinUrl">YouTube video link</label>
+        <div class="url-row"><div class="url-input-wrap"><svg class="link-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 13.5a4.5 4.5 0 0 0 6.36 0l3-3A4.5 4.5 0 0 0 13 4.14l-1.72 1.72M14 10.5a4.5 4.5 0 0 0-6.36 0l-3 3A4.5 4.5 0 0 0 11 19.86l1.72-1.72"/></svg><input id="pinUrl" type="url" placeholder="https://youtube.com/watch?v=…" autocomplete="url" spellcheck="false"><button class="paste-btn" id="pasteBtn" type="button">Paste</button></div><button class="download-btn" id="downloadBtn" type="button"><span class="download-symbol">↓</span> Find video</button></div>
+        <div class="format-row"><span class="format-label">FORMAT</span><label class="format-option selected"><input type="radio" name="format" value="mp4" checked><span class="format-icon">▶</span><span><b>MP4 Video</b><small>Video + sound</small></span></label><label class="format-option"><input type="radio" name="format" value="mp3"><span class="format-icon audio">♫</span><span><b>MP3 Audio</b><small>Audio only</small></span></label></div>
+        <div class="quality-panel" id="qualityPanel" hidden>
+          <label class="quality-label" for="videoQuality">VIDEO QUALITY</label>
+          <select id="videoQuality" class="quality-select"><option value="best">Best available (original)</option></select>
+          <p class="quality-help" id="videoQualityHelp">Only resolutions available for this video are shown.</p>
+          <div id="audioQualityGroup" hidden><label class="quality-label" for="audioBitrate">MP3 BITRATE</label><select id="audioBitrate" class="quality-select"><option value="320">320 kbps · Highest MP3 bitrate</option><option value="256">256 kbps</option><option value="192" selected>192 kbps · Balanced</option><option value="128">128 kbps</option><option value="96">96 kbps</option><option value="64">64 kbps · Smaller file</option></select><p class="quality-help">Higher bitrate can increase file size; it cannot restore detail missing from the original audio.</p></div>
+        </div>
+        <p class="privacy-note"><span>✳</span> No account needed · Only download content you have permission to use</p>
+        <section id="progressPanel" class="progress-panel" aria-live="polite" hidden>
+          <div class="progress-top"><div class="progress-orb"><svg viewBox="0 0 120 120" aria-hidden="true"><circle class="progress-track" cx="60" cy="60" r="49"></circle><circle id="progressRing" class="progress-ring" cx="60" cy="60" r="49"></circle></svg><div class="progress-number"><strong id="progressPercent">0%</strong><span>PROGRESS</span></div></div>
+          <div class="progress-copy"><span class="progress-kicker"><i class="progress-live-dot"></i> YT DROP PROCESSING</span><h3 id="progressTitle">Preparing your download</h3><p id="progressStage">Connecting to YouTube…</p><div id="progressDetails" class="progress-details">This can take a moment. Keep this tab open.</div></div></div>
+          <div class="progress-bar-wrap"><div class="progress-bar-meta"><span>Download progress</span><strong id="progressBarPercent">0%</strong></div><div class="progress-bar"><span id="progressBarFill"></span><i></i></div></div>
+          <div id="progressSuccess" class="progress-success" hidden><span>✓</span> Your file is ready. Starting download…</div>
+        </section>
+        <div id="status" class="status" role="status" aria-live="polite" hidden></div>
+        <div id="result" class="result-card" hidden><img id="previewImage" alt="Video thumbnail" hidden><div class="result-info"><span class="result-kicker">VIDEO FOUND</span><h3 id="resultTitle">Your video</h3><p id="resultMeta">Ready to download</p></div><button class="result-download" id="actualDownloadBtn" type="button">Download file <span>↓</span></button></div>
+      </div>
+      <div class="trust-row"><span><b>✓</b> MP4 video</span><span><b>✓</b> MP3 audio</span><span><b>✓</b> Mobile friendly</span></div>
+    </div>
+    <div class="hero-orbit orbit-a"></div><div class="hero-orbit orbit-b"></div><div class="floating-badge badge-a"><span class="badge-play">▶</span><span><b>MP4 ready</b><small>Video download</small></span></div><div class="floating-badge badge-b"><span class="badge-note">♫</span><span><b>MP3 audio</b><small>Take it anywhere</small></span></div>
+    <div class="scroll-cue"><span></span> SCROLL TO EXPLORE</div>
+  </section>
+  <section class="steps-section section-wrap" id="how-it-works"><div class="section-heading reveal"><span class="section-kicker">THREE SIMPLE STEPS</span><h2>From link to <span class="gradient-text">download.</span></h2><p>No complicated setup. Just copy, paste, and save media you’re allowed to download.</p></div><div class="steps-grid"><article class="step-card reveal"><div class="step-icon">↗</div><span class="step-number">STEP 01</span><h3>Copy the link</h3><p>Open a YouTube video and copy its share link from the Share menu.</p><span class="card-index">01</span></article><article class="step-card reveal"><div class="step-icon">⌁</div><span class="step-number">STEP 02</span><h3>Choose your format</h3><p>Paste the link above and select MP4 for video or MP3 for audio.</p><span class="card-index">02</span></article><article class="step-card reveal"><div class="step-icon">↓</div><span class="step-number">STEP 03</span><h3>Save your file</h3><p>Review the video details, then start the download when it’s available.</p><span class="card-index">03</span></article></div></section>
+  <section class="feature-section"><div class="feature-inner section-wrap"><div class="feature-copy reveal"><span class="section-kicker">BUILT FOR THE FLOW</span><h2>Your media.<br><span class="gradient-text">Your format.</span></h2><p>One clean workflow for video and audio, with clear status updates and a responsive interface that feels at home on any screen.</p><a class="text-link" href="#downloader">Try YT Drop <span>→</span></a></div><div class="format-showcase reveal"><div class="showcase-glow"></div><div class="showcase-card card-video"><div class="showcase-icon play">▶</div><div><b>MP4 Video</b><small>Keep the full picture</small></div><span class="format-pill">.MP4</span></div><div class="showcase-card card-audio"><div class="showcase-icon note">♫</div><div><b>MP3 Audio</b><small>Keep only the sound</small></div><span class="format-pill">.MP3</span></div><div class="soundwave"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></div></div></section>
+  <section class="faq-section section-wrap" id="faq"><div class="section-heading reveal"><span class="section-kicker">GOT QUESTIONS?</span><h2>Quick answers.</h2><p>What to know before you download.</p></div><div class="faq-list reveal"><details><summary>Can I download both video and audio?<span>+</span></summary><p>Yes. Choose MP4 for video with sound or MP3 to extract audio. MP3 conversion requires FFmpeg on the server.</p></details><details><summary>Why did a YouTube link fail?<span>+</span></summary><p>A video may be private, age-restricted, region-restricted, live, removed, or temporarily unsupported. Try a publicly accessible video. YouTube can change how its media is delivered, so availability is not guaranteed.</p></details><details><summary>Does it work on mobile?<span>+</span></summary><p>The website is responsive and can be used from a mobile browser. Download behavior depends on your browser and device.</p></details><details><summary>Can I download any video I find?<span>+</span></summary><p>Only download videos you own or have permission to save, and follow YouTube’s terms and applicable copyright law. YT Drop does not bypass private access or DRM restrictions.</p></details><details><summary>Is YT Drop affiliated with YouTube?<span>+</span></summary><p>No. YT Drop is an independent project and is not affiliated with or endorsed by YouTube or Google.</p></details></div></section>
+</main>
+<footer class="site-footer"><div class="footer-main"><a class="brand footer-brand" href="#home"><img src="{{ url_for('static', filename='logo.svg') }}" alt="" class="brand-logo"><span>YT<span class="brand-accent">Drop</span></span></a><p>A cleaner way to save media you’re allowed to keep.</p><div class="footer-links"><a href="#home">Home</a><a href="#how-it-works">How it works</a><a href="#faq">FAQ</a></div></div><div class="footer-bottom"><span>© <span id="year"></span> YT Drop. Independent project.</span><span>Not affiliated with YouTube.</span></div></footer>
+<script src="{{ url_for('static', filename='app.js') }}"></script>
+</body></html>
