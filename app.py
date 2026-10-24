@@ -71,15 +71,18 @@ def validate_youtube_url(raw_url):
 
 
 def ydl_options(outtmpl=None, download=False):
+    """Options shared by metadata lookup and download jobs."""
     opts = {
         "quiet": True,
-        "no_warnings": True,
+        "no_warnings": False,
         "noplaylist": True,
-        "socket_timeout": 20,
-        "retries": 1,
-        "extractor_retries": 1,
+        "socket_timeout": 30,
+        "retries": 2,
+        "extractor_retries": 2,
         "skip_download": not download,
         "restrictfilenames": True,
+        # yt-dlp can fetch its EJS challenge-solving component from GitHub.
+        "remote_components": ["ejs:github"],
     }
     if outtmpl:
         opts["outtmpl"] = outtmpl
