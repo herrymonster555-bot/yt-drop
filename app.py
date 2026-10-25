@@ -70,19 +70,41 @@ def validate_youtube_url(raw_url):
     return raw_url
 
 
-def ydl_options(outtmpl=None, download=False):
-    """Options shared by metadata lookup and download jobs."""
+# YouTube extractor config to bypass "Failed to extract any player response" on cloud IPs.
+# Try multiple player clients in order of reliability for server-side extraction.
+YT_PLAYER_CLIENTS = ["android", "web", "mweb", "tv_embedded"]
+
+# Realistic desktop Chrome user agent; YouTube serves player response more reliably to known browsers.
+DEFAULT_UA = (
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+    "AppleWebKit/537.36 (KHTML, like Gecko) "
+    "Chrome/131.0.0.0 Safari/537.36"
+)
+
+
+def ydl_options(outtmpl=None, download=False, player_clients=None):
+    """Return yt-dlp options tuned for YouTube on cloud hosts.
+
+    player_clients: list of client names to try (default: YT_PLAYER_CLIENTS).
+    """
+    clients = player_clients or YT_PLAYER_CLIENTS
     opts = {
         "quiet": True,
-        "no_warnings": False,
+        "no_warnings": False,  # Keep warnings for diagnostics
         "noplaylist": True,
         "socket_timeout": 30,
-        "retries": 2,
-        "extractor_retries": 2,
+        "retries": 3,
+        "extractor_retries": 3,
         "skip_download": not download,
         "restrictfilenames": True,
-        # yt-dlp can fetch its EJS challenge-solving component from GitHub.
-        "remote_components": ["ejs:github"],
+        "http_headers": {"User-Agent": DEFAULT_UA, "Accept-Language": "en-US,en;q=0.9"},
+        "extractor_args": {
+            "youtube": {
+                "player_client": clients,
+                "player_skip": ["configs", "webpage"],
+                "skip": ["dash", "hls"],  # Let yt-dlp pick best; dash/hls sometimes fail on cloud
+            }
+        },
     }
     if outtmpl:
         opts["outtmpl"] = outtmpl
@@ -124,6 +146,76 @@ def health():
     return jsonify({"ok": True})
 
 
+@app.get("/api/diagnose")
+def diagnose():
+    """Diagnostic endpoint: checks yt-dlp version, FFmpeg, and tests a quick extraction."""
+    import subprocess
+    import shutil
+
+    ytdlp_version = "unknown"
+    try:
+        import yt_dlp
+        ytdlp_version = yt_dlp.version.__version__
+    except Exception:
+        pass
+
+    ffmpeg_path = shutil.which("ffmpeg")
+    ffmpeg_version = "not found"
+    if ffmpeg_path:
+        try:
+            result = subprocess.run([ffmpeg_path, "-version"], capture_output=True, text=True, timeout=5)
+            ffmpeg_version = result.stdout.split("\n")[0] if result.stdout else "unknown"
+        except Exception:
+            ffmpeg_version = "error getting version"
+
+    # Quick test extraction (no download) on a known-public video
+    test_url = "https://www.youtube.com/watch?v=jNQXAC9IVRw"  # "Me at the zoo" - first YouTube video
+    test_result = {"ok": False, "error": None}
+    try:
+        with yt_dlp.YoutubeDL(ydl_options()) as ydl:
+            info = ydl.extract_info(test_url, download=False)
+        test_result = {"ok": True, "title": info.get("title"), "id": info.get("id")}
+    except Exception as e:
+        test_result = {"ok": False, "error": str(e)}
+
+    return jsonify({
+        "yt_dlp_version": ytdlp_version,
+        "ffmpeg": {"path": ffmpeg_path, "version": ffmpeg_version},
+        "test_extraction": test_result,
+        "python_version": subprocess.run(["python", "--version"], capture_output=True, text=True).stdout.strip(),
+        "player_clients_tried": YT_PLAYER_CLIENTS,
+    })
+
+
+def _is_player_response_error(exc: Exception) -> bool:
+    """Detect YouTube's 'Failed to extract any player response' error."""
+    msg = str(exc).lower()
+    return "player response" in msg or "extract any player" in msg
+
+
+def _friendly_youtube_error(exc: Exception) -> str:
+    """Return a user-friendly error message for common YouTube/yt-dlp failures."""
+    msg = str(exc).lower()
+    if "player response" in msg or "extract any player" in msg:
+        return (
+            "YouTube blocked this request from our server. This happens on cloud hosts. "
+            "Try a different video, or try again later — YouTube may unblock the IP."
+        )
+    if "private" in msg or "unavailable" in msg:
+        return "This video is private, deleted, or unavailable."
+    if "age" in msg and "restrict" in msg:
+        return "This video is age-restricted and cannot be downloaded without authentication."
+    if "region" in msg or "geo" in msg or "country" in msg:
+        return "This video is not available in your region."
+    if "live" in msg:
+        return "Live streams cannot be downloaded while they are live."
+    if "copyright" in msg or "drm" in msg or "protected" in msg:
+        return "This video is protected by copyright or DRM and cannot be downloaded."
+    if "sign in" in msg or "login" in msg or "auth" in msg:
+        return "This video requires sign-in and cannot be accessed."
+    return "We couldn't access this video. It may be private, unavailable, age-restricted, or unsupported. Try another public YouTube video."
+
+
 @app.post("/api/resolve")
 def resolve():
     data = request.get_json(silent=True) or {}
@@ -162,10 +254,7 @@ def resolve():
         return jsonify({"ok": False, "error": str(e)}), 400
     except Exception as e:
         app.logger.exception("YouTube resolve failed: %s", e)
-        return jsonify({
-            "ok": False,
-            "error": "We couldn't access this video. It may be private, unavailable, age-restricted, or unsupported. Try another public YouTube video."
-        }), 422
+        return jsonify({"ok": False, "error": _friendly_youtube_error(e)}), 422
 
 
 def run_download_job(job_id, url, media_format, quality, bitrate):
@@ -231,8 +320,7 @@ def run_download_job(job_id, url, media_format, quality, bitrate):
         cleanup_job_files(job_id)
         with LOCK:
             if job_id in JOBS:
-                JOBS[job_id].update(state="error", stage="Download failed",
-                                    error="Download failed. The video may be restricted or unavailable. Ensure FFmpeg is installed for MP3 extraction and MP4 merging.")
+                JOBS[job_id].update(state="error", stage="Download failed", error=_friendly_youtube_error(exc))
 
 
 @app.post("/api/download")
